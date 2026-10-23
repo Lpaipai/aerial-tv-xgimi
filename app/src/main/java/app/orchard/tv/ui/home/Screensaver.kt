@@ -1,3 +1,4 @@
+// 2026/10/22 19:09:52 by Aerial Custom Contributors
 package app.orchard.tv.ui.home
 
 import android.os.Build
@@ -112,7 +113,7 @@ fun Screensaver(visible: Boolean, apps: List<AppEntry>, now: LocalDateTime, skip
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             when (Wallpapers.screensaver) {
                 ScreensaverMode.Aerial -> if (aerialFailed) PhotoSaver(now, skips.steps) else AerialSaver(now, skips.steps, onUnavailable = { aerialFailed = true })
-                ScreensaverMode.Photos -> PhotoSaver(now, skips.steps, remember { Wallpapers.screensaverPicture() })
+                ScreensaverMode.AerialViews, ScreensaverMode.Photos -> PhotoSaver(now, skips.steps, remember { Wallpapers.screensaverPicture() })
                 ScreensaverMode.Clock -> ClockSaver(apps, now)
             }
         }

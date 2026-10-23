@@ -1,3 +1,4 @@
+> **XGIMI custom build 1.38-av2**: based on upstream v1.38, with Aerial Views integration and a fix for duplicate automatic screensaver launches. See the [custom-build notes](docs/XGIMI_CUSTOM.md) for build instructions and validation limits. This repository publishes source only. Upstream installation links below use the upstream signing key and cannot update a custom installation signed with a different key.
 <div align="center">
 
 <img src="docs/brand/icon.png" width="96" alt="Aerial icon">

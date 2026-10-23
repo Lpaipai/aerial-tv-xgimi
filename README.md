@@ -1,3 +1,4 @@
+> **极米定制版 1.38-av2**：基于上游 v1.38，增加 Aerial Views 联动并修复双路自动屏保触发。构建、设备验证与限制见 [定制说明](docs/XGIMI_CUSTOM.md)。本仓库只发布源码；下方上游安装链接使用上游签名，不能直接覆盖不同签名的定制版本。
 <div align="center">
 
 <img src="docs/brand/icon.png" width="96" alt="Aerial 图标">

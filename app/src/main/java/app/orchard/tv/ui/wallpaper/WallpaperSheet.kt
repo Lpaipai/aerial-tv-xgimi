@@ -1,3 +1,4 @@
+// 2026/10/22 19:09:52 by Aerial Custom Contributors
 package app.orchard.tv.ui.wallpaper
 
 import androidx.activity.compose.BackHandler
@@ -533,10 +534,15 @@ private fun ActionChip(label: String, glyph: Glyph, onClick: () -> Unit) {
 }
 
 @Composable
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 private fun ScreensaverChoice(onStart: () -> Unit) {
     // The choice first, then the action that tries it.
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    androidx.compose.foundation.layout.FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         listOf(
+            ScreensaverMode.AerialViews to R.string.ss_aerial_views,
             ScreensaverMode.Aerial to R.string.ss_aerial,
             ScreensaverMode.Photos to R.string.ss_photos,
             ScreensaverMode.Clock to R.string.ss_clock,

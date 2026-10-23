@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="ss_aerial_views">Aerial Views</string>
+    <string name="ss_aerial_views_missing">Aerial Views is unavailable. Showing the photo screensaver.</string>
     <string name="app_name">Aerial</string>
     <string name="guard_name">Aerial Home Guard</string>
     <string name="guard_description">Keeps Aerial as your home screen on TVs that do not let you change it. Reads no screen content.</string>
@@ -94,7 +96,7 @@
     <string name="wp_auto_note">Light taken from the selected app\'s artwork.</string>
     <string name="wp_screensaver">Screensaver</string>
     <string name="ss_follow_hint">Not chosen yet, so it follows the wallpaper: aerial films with the aerial wallpaper, photos with a picture, starting from that picture. Choose one to keep it.</string>
-    <string name="ss_aerial">Aerial</string>
+    <string name="ss_aerial">Built-in aerial</string>
     <string name="ss_photos">Photos</string>
     <string name="ss_clock">Clock</string>
     <string name="wp_phone_title">Set up with your phone</string>

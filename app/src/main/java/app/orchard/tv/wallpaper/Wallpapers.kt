@@ -1,3 +1,4 @@
+// 2026/10/22 19:09:52 by Aerial Custom Contributors
 package app.orchard.tv.wallpaper
 
 import android.content.Context
@@ -11,6 +12,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.content.edit
 import app.orchard.tv.BuildConfig
+import app.orchard.tv.guard.GuardSetup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,10 +40,10 @@ data class Wallpaper(
 )
 
 enum class ScreensaverMode(val key: String) {
-    Aerial("aerial"), Photos("photos"), Clock("clock");
+    AerialViews("aerial_views"), Aerial("aerial"), Photos("photos"), Clock("clock");
 
     companion object {
-        fun of(key: String?) = entries.firstOrNull { it.key == key } ?: Aerial
+        fun of(key: String?) = entries.firstOrNull { it.key == key } ?: AerialViews
     }
 }
 
@@ -161,15 +163,15 @@ object Wallpapers {
 
     /**
      * A new install's screensaver follows the wallpaper. One that was already in use when that came
-     * (1.38) keeps what it showed, aerial films, until the owner chooses. Kept either way, so it
+     * (1.38) keeps the local Aerial Views integration until the owner chooses. Kept either way, so it
      * does not change with a later update.
      */
     private fun firstScreensaver(): ScreensaverMode? {
         val fresh = runCatching {
             app.packageManager.getPackageInfo(app.packageName, 0).let { it.firstInstallTime == it.lastUpdateTime }
         }.getOrDefault(false)
-        prefs.edit { putString("screensaver", if (fresh) FOLLOW else ScreensaverMode.Aerial.key) }
-        return if (fresh) null else ScreensaverMode.Aerial
+        prefs.edit { putString("screensaver", if (fresh) FOLLOW else ScreensaverMode.AerialViews.key) }
+        return if (fresh) null else ScreensaverMode.AerialViews
     }
 
     /** The wallpaper's picture, when the photo screensaver starts from it: a picture wallpaper, not the aerial one. */
@@ -179,6 +181,7 @@ object Wallpapers {
     fun chooseScreensaver(mode: ScreensaverMode) {
         chosenScreensaver = mode
         prefs.edit { putString("screensaver", mode.key) }
+        GuardSetup.keepScreensaver(app)
     }
 
     /** The concrete wallpaper the selection points at today. */

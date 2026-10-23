@@ -1,3 +1,4 @@
+// 2026/10/22 19:09:52 by Aerial Custom Contributors
 package app.orchard.tv.update
 
 import android.content.ActivityNotFoundException
@@ -60,6 +61,8 @@ object Updates {
     private var lastAttempt = 0L
 
     fun init(context: Context) {
+        // This locally signed build cannot install upstream's differently signed updates.
+        if (BuildConfig.VERSION_NAME.contains("-av")) return
         if (started) return
         started = true
         prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -141,7 +144,8 @@ object Updates {
     private const val PACKAGE = "app.orchard.tv"
 
     /** Whether this copy can update itself from the release at all. */
-    fun canInstall(context: Context): Boolean = context.packageName == PACKAGE
+    fun canInstall(context: Context): Boolean =
+        context.packageName == PACKAGE && !BuildConfig.VERSION_NAME.contains("-av")
 
     /**
      * Downloads this flavor's APK of the latest release and opens the system installer on it.

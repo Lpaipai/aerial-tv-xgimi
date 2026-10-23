@@ -1,3 +1,4 @@
+// 2026/10/22 19:09:52 by Aerial Custom Contributors
 package app.orchard.tv.guard
 
 import android.Manifest
@@ -14,6 +15,8 @@ import android.provider.Settings
 import androidx.core.content.ContextCompat
 import android.util.Log
 import app.orchard.tv.dream.AerialDream
+import app.orchard.tv.wallpaper.AerialViewsBridge
+import app.orchard.tv.wallpaper.ScreensaverMode
 
 /**
  * Turns Home Guard back on after the firmware turned it off.
@@ -191,20 +194,40 @@ object GuardSetup {
         if (own) keepScreensaver(context)
     }
 
-    private fun keepScreensaver(context: Context) {
+    fun keepScreensaver(context: Context) {
         if (!isUserUnlocked(context)) return
         val resolver = context.contentResolver
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val key = "screensaver_components"
         val current = Settings.Secure.getString(resolver, key).orEmpty()
-        val mine = ComponentName(context, AerialDream::class.java).flattenToString()
+        val mode = context.getSharedPreferences("wallpaper", Context.MODE_PRIVATE)
+            .getString("screensaver", null)
+        val mine = if (mode == ScreensaverMode.AerialViews.key && AerialViewsBridge.available(context)) {
+            AerialViewsBridge.dream.flattenToString()
+        } else {
+            ComponentName(context, AerialDream::class.java).flattenToString()
+        }
         // 1.6 and earlier: the class was OrchardDream, and install.sh had claimed the screensaver.
         val renamed = "${context.packageName}/${context.packageName}.dream.OrchardDream" in current
         if (renamed) prefs.edit().putBoolean(KEY_OWN_SCREENSAVER, true).apply()
-        if (!prefs.getBoolean(KEY_OWN_SCREENSAVER, false) || current == mine) return
+        if (!prefs.getBoolean(KEY_OWN_SCREENSAVER, false)) return
         runCatching {
-            Settings.Secure.putString(resolver, key, mine)
-            Log.i(TAG, "the system screensaver was $current; put Aerial's back")
+            if (current != mine) {
+                Settings.Secure.putString(resolver, key, mine)
+                Log.i(TAG, "the system screensaver was $current; selected $mine")
+            }
+            // Aerial Views uses only the system idle timer. Keep the visible delay setting
+            // authoritative, including changes made after Home stopped owning idle entry.
+            if (mine == AerialViewsBridge.dream.flattenToString()) {
+                val minutes = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                    .getInt("screensaver_minutes", 5)
+                if (minutes > 0) {
+                    val timeout = minutes * 60_000L
+                    if (Settings.System.getLong(resolver, Settings.System.SCREEN_OFF_TIMEOUT, -1) != timeout) {
+                        Settings.System.putLong(resolver, Settings.System.SCREEN_OFF_TIMEOUT, timeout)
+                    }
+                }
+            }
         }.onFailure { Log.w(TAG, "could not set the system screensaver", it) }
     }
 
@@ -221,7 +244,10 @@ object GuardSetup {
         runCatching {
             if (off) {
                 val mine = ComponentName(context, AerialDream::class.java).flattenToString()
-                if (Settings.Secure.getString(resolver, "screensaver_components") != mine) return
+                val current = Settings.Secure.getString(resolver, "screensaver_components")
+                val linkedAerialViews = prefs.getBoolean(KEY_OWN_SCREENSAVER, false) &&
+                    current == AerialViewsBridge.dream.flattenToString()
+                if (current != mine && !linkedAerialViews) return
                 if (Settings.Secure.getInt(resolver, KEY_SCREENSAVER_ENABLED, 1) == 0) return
                 Settings.Secure.putInt(resolver, KEY_SCREENSAVER_ENABLED, 0)
                 prefs.edit().putBoolean(KEY_SCREENSAVER_SWITCHED_OFF, true).apply()

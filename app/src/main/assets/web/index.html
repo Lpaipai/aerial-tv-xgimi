@@ -111,8 +111,9 @@
 </header>
 
 <h2>屏幕保护程序</h2>
-<div class="segmented" id="ss" role="group" aria-label="屏保">
-  <button data-mode="aerial">航拍</button>
+<div class="segmented two" id="ss" role="group" aria-label="屏保">
+  <button data-mode="aerial_views">Aerial Views</button>
+  <button data-mode="aerial">内置航拍</button>
   <button data-mode="photos">照片</button>
   <button data-mode="clock">时钟</button>
 </div>
@@ -163,6 +164,7 @@ const $ = s => document.querySelector(s);
 let state = null;
 
 const hints = {
+  aerial_views: '使用已安装的 Aerial Views；视频源和画质在 Aerial Views 中设置。未安装时回退到照片屏保。',
   aerial: '播放 Apple TV 航拍影片，画面会标出所在的地点。',
   photos: '轮播每日精选和你的照片。',
   clock: '大号时钟，配合当前壁纸。'

@@ -225,6 +225,7 @@ object AerialSettings {
         screensaverMinutes = minutes
         app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit { putInt("screensaver_minutes", minutes) }
         GuardSetup.setSystemScreensaverOff(app, minutes == NEVER)
+        GuardSetup.keepScreensaver(app)
     }
 
     fun setPinned(inputId: String, pinned: Boolean) {

@@ -1,3 +1,4 @@
+// 2026/10/22 19:09:52 by Aerial Custom Contributors
 package app.orchard.tv
 
 import android.app.ActivityOptions
@@ -53,6 +54,8 @@ import app.orchard.tv.settings.AerialSettings
 import app.orchard.tv.wallpaper.Wallpapers
 import app.orchard.tv.system.DiagLog
 import app.orchard.tv.system.Diagnostics
+import app.orchard.tv.wallpaper.AerialViewsBridge
+import app.orchard.tv.wallpaper.ScreensaverMode
 import app.orchard.tv.system.MissingClipboard
 import app.orchard.tv.system.Sounds
 import app.orchard.tv.system.SystemProbe
@@ -105,6 +108,7 @@ class MainActivity : ComponentActivity() {
         DiagLog.init(this)
         DiagLog.i("onCreate ${intent.action} restored=${savedInstanceState != null}; ${DiagLog.device()}")
         super.onCreate(savedInstanceState)
+        previewPending = intent.action == ACTION_PREVIEW_SCREENSAVER
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
@@ -156,7 +160,10 @@ class MainActivity : ComponentActivity() {
                     onAppInfo = { open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", it, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
                     onUninstall = { open(Intent(Intent.ACTION_DELETE, Uri.fromParts("package", it, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
                     // Posted so the key-up of the Back press that started it does not end it at once.
-                    onStartScreensaver = { idleHandler.postDelayed({ showScreensaver.run() }, 150) },
+                    onStartScreensaver = {
+                        idleHandler.removeCallbacks(showScreensaver)
+                        idleHandler.postDelayed(showScreensaver, 150)
+                    },
                 )
             }
         }
@@ -304,8 +311,17 @@ class MainActivity : ComponentActivity() {
     // ---- Screensaver: Aerial's own, before the firmware's ad-carrying one can start ----
 
     private val idleHandler = Handler(Looper.getMainLooper())
+    private var previewPending = false
     private val showScreensaver = Runnable {
         DiagLog.i("screensaver starts (${Wallpapers.screensaver})")
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@Runnable
+        if (Wallpapers.screensaver == ScreensaverMode.AerialViews) {
+            if (AerialViewsBridge.start(this)) {
+                openedAppSinceHome = true
+                return@Runnable
+            }
+            Toast.makeText(this, R.string.ss_aerial_views_missing, Toast.LENGTH_LONG).show()
+        }
         vm.screensaverVisible = true
         // Holding the screen on keeps the firmware's screensaver from starting over ours. After a
         // long stretch, let go so the TV's own power policy can still turn the panel off.
@@ -313,6 +329,15 @@ class MainActivity : ComponentActivity() {
         idleHandler.postDelayed(releaseScreen, SCREENSAVER_HOLD_MS)
     }
     private val releaseScreen = Runnable { window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+    private val showIdleScreensaver = Runnable {
+        // Recheck at dispatch too: system settings may have changed since the timer was queued.
+        if (!systemHandlesIdleScreensaver()) showScreensaver.run()
+    }
+
+    private fun systemHandlesIdleScreensaver(): Boolean =
+        Wallpapers.screensaver == ScreensaverMode.AerialViews &&
+            AerialViewsBridge.isSystemScreensaverEnabled(this)
+
     private var swallowKeyUp = -1
 
     /**
@@ -329,7 +354,13 @@ class MainActivity : ComponentActivity() {
     private fun restartIdleTimer() {
         vm.lastInputAt = SystemClock.uptimeMillis()
         idleHandler.removeCallbacks(showScreensaver)
-        if (AerialSettings.screensaverMinutes != AerialSettings.NEVER) idleHandler.postDelayed(showScreensaver, idleBeforeScreensaver())
+        idleHandler.removeCallbacks(showIdleScreensaver)
+        // On NEW Z6X, two five-minute timers started TestActivity and DreamActivity together.
+        // Leave automatic entry to the selected system dream; manual previews still use the
+        // original showScreensaver path, and other screensaver modes keep Home's timer.
+        if (AerialSettings.screensaverMinutes != AerialSettings.NEVER && !systemHandlesIdleScreensaver()) {
+            idleHandler.postDelayed(showIdleScreensaver, idleBeforeScreensaver())
+        }
     }
 
     /**
@@ -396,7 +427,12 @@ class MainActivity : ComponentActivity() {
         DiagLog.i("onNewIntent ${intent.action}")
         if (intent.getBooleanExtra(EXTRA_WOKE, false)) openBootSource("brought back on wake")
         if (intent.action == ACTION_PREVIEW_SCREENSAVER) {
-            idleHandler.post { showScreensaver.run() }
+            previewPending = true
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                previewPending = false
+                idleHandler.removeCallbacks(showScreensaver)
+                idleHandler.post(showScreensaver)
+            }
             return
         }
         if (intent.hasCategory(Intent.CATEGORY_HOME) || intent.action == Intent.ACTION_MAIN) {
@@ -456,6 +492,11 @@ class MainActivity : ComponentActivity() {
         DiagLog.i("onResume; screensaver after ${idleBeforeScreensaver() / 1000} s")
         restartIdleTimer()
         GuardSetup.setHomeInFront(this, true)
+        if (previewPending) {
+            previewPending = false
+            idleHandler.removeCallbacks(showScreensaver)
+            idleHandler.post(showScreensaver)
+        }
         HomeGuardService.onAerialResumed()
         Updates.onHomeResumed()
         vm.refreshSystem()
@@ -474,6 +515,7 @@ class MainActivity : ComponentActivity() {
         DiagLog.i("onPause")
         GuardSetup.setHomeInFront(this, false)
         idleHandler.removeCallbacks(showScreensaver)
+        idleHandler.removeCallbacks(showIdleScreensaver)
         hideScreensaver()
     }
 

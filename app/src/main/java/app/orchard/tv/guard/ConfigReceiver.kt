@@ -1,3 +1,4 @@
+// 2026/10/22 19:09:52 by Aerial Custom Contributors
 package app.orchard.tv.guard
 
 import android.content.BroadcastReceiver
@@ -7,6 +8,8 @@ import app.orchard.tv.apps.TileSheet
 import app.orchard.tv.settings.AerialSettings
 import app.orchard.tv.system.DiagLog
 import app.orchard.tv.update.Updates
+import app.orchard.tv.wallpaper.ScreensaverMode
+import app.orchard.tv.wallpaper.Wallpapers
 import kotlinx.coroutines.launch
 
 /**
@@ -60,9 +63,18 @@ class ConfigReceiver : BroadcastReceiver() {
             Updates.init(context)
             Updates.checkIfStale(force = true)
         }
+        Wallpapers.init(context)
+        AerialSettings.init(context)
+        intent.getStringExtra("screensaver_mode")?.let { key ->
+            ScreensaverMode.entries.firstOrNull { it.key == key }?.let(Wallpapers::chooseScreensaver)
+        }
+        if (intent.hasExtra("screensaver_minutes")) {
+            val minutes = intent.getIntExtra("screensaver_minutes", 10)
+            if (minutes in AerialSettings.screensaverChoices) AerialSettings.chooseScreensaverMinutes(minutes)
+        }
         if (intent.hasExtra("keep_adb")) GuardSetup.setKeepAdb(context, intent.getBooleanExtra("keep_adb", false))
         if (intent.hasExtra("own_screensaver")) GuardSetup.setOwnScreensaver(context, intent.getBooleanExtra("own_screensaver", false))
         GuardSetup.ensureEnabled(context)
-        resultData = "keep_adb=${GuardSetup.keepAdb(context)}"
+        resultData = "keep_adb=${GuardSetup.keepAdb(context)} screensaver=${Wallpapers.screensaver.key} minutes=${AerialSettings.screensaverMinutes}"
     }
 }
